@@ -17,11 +17,8 @@ from typing import Optional
 from jose import JWTError, jwt
 import bcrypt
 
-# Try imports with backend prefix first, fallback to direct imports
-try:
-    from backend.config import settings
-except ImportError:
-    from config import settings
+# Use direct imports (Railway runs from /backend directory)
+from config import settings
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """Verify a password against a hash"""

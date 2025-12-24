@@ -19,15 +19,10 @@ if str(current_dir) not in sys.path:
 if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
 
-# Try imports with backend prefix first, fallback to direct imports
-try:
-    from backend.utils.database import get_raw_connection
-    from backend.config import settings
-    from backend.utils.link_preview import fetch_link_preview
-except ImportError:
-    from utils.database import get_raw_connection
-    from config import settings
-    from utils.link_preview import fetch_link_preview
+# Use direct imports (Railway runs from /backend directory)
+from utils.database import get_raw_connection
+from config import settings
+from utils.link_preview import fetch_link_preview
 
 # Try PostgreSQL, fallback to SQLite
 try:

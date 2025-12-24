@@ -15,11 +15,8 @@ from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean, T
 from sqlalchemy.orm import relationship
 from datetime import datetime
 
-# Try imports with backend prefix first, fallback to direct imports
-try:
-    from backend.utils.database import Base
-except ImportError:
-    from utils.database import Base
+# Use direct imports (Railway runs from /backend directory)
+from utils.database import Base
 
 class User(Base):
     __tablename__ = "users"
