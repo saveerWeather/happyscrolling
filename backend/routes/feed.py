@@ -17,19 +17,12 @@ from sqlalchemy.orm import Session
 from sqlalchemy import or_
 from typing import Optional, Dict
 
-# Try imports with backend prefix first, fallback to direct imports
-try:
-    from backend.utils.database import get_db
-    from backend.models import FeedItem, User, UserEmail
-    from backend.schemas import FeedItemResponse, FeedResponse
-    from backend.routes.auth import get_current_user
-    from backend.utils.link_preview import fetch_link_preview
-except ImportError:
-    from utils.database import get_db
-    from models import FeedItem, User, UserEmail
-    from schemas import FeedItemResponse, FeedResponse
-    from routes.auth import get_current_user
-    from utils.link_preview import fetch_link_preview
+# Use direct imports (Railway runs from /backend directory)
+from utils.database import get_db
+from models import FeedItem, User, UserEmail
+from schemas import FeedItemResponse, FeedResponse
+from routes.auth import get_current_user
+from utils.link_preview import fetch_link_preview
 
 router = APIRouter(prefix="/api/feed", tags=["feed"])
 

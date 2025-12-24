@@ -15,17 +15,11 @@ if str(project_root) not in sys.path:
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
 
-# Try imports with backend prefix first, fallback to direct imports
-try:
-    from backend.utils.database import get_db
-    from backend.models import User
-    from backend.schemas import UserRegister, UserLogin, UserResponse
-    from backend.utils.auth import verify_password, get_password_hash
-except ImportError:
-    from utils.database import get_db
-    from models import User
-    from schemas import UserRegister, UserLogin, UserResponse
-    from utils.auth import verify_password, get_password_hash
+# Use direct imports (Railway runs from /backend directory)
+from utils.database import get_db
+from models import User
+from schemas import UserRegister, UserLogin, UserResponse
+from utils.auth import verify_password, get_password_hash
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
