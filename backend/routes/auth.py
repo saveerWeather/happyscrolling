@@ -1,14 +1,31 @@
 """Authentication routes"""
 import sys
 from pathlib import Path
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+
+# Add paths for imports
+current_dir = Path(__file__).parent
+backend_dir = current_dir.parent
+project_root = backend_dir.parent
+
+if str(backend_dir) not in sys.path:
+    sys.path.insert(0, str(backend_dir))
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
 
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
-from backend.utils.database import get_db
-from backend.models import User
-from backend.schemas import UserRegister, UserLogin, UserResponse
-from backend.utils.auth import verify_password, get_password_hash
+
+# Try imports with backend prefix first, fallback to direct imports
+try:
+    from backend.utils.database import get_db
+    from backend.models import User
+    from backend.schemas import UserRegister, UserLogin, UserResponse
+    from backend.utils.auth import verify_password, get_password_hash
+except ImportError:
+    from utils.database import get_db
+    from models import User
+    from schemas import UserRegister, UserLogin, UserResponse
+    from utils.auth import verify_password, get_password_hash
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 

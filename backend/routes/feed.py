@@ -1,18 +1,35 @@
 """Feed routes"""
 import sys
 from pathlib import Path
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+
+# Add paths for imports
+current_dir = Path(__file__).parent
+backend_dir = current_dir.parent
+project_root = backend_dir.parent
+
+if str(backend_dir) not in sys.path:
+    sys.path.insert(0, str(backend_dir))
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import or_
-from typing import Optional
-from backend.utils.database import get_db
-from backend.models import FeedItem, User, UserEmail
-from backend.schemas import FeedItemResponse, FeedResponse
-from backend.routes.auth import get_current_user
-from backend.utils.link_preview import fetch_link_preview
-from typing import Dict
+from typing import Optional, Dict
+
+# Try imports with backend prefix first, fallback to direct imports
+try:
+    from backend.utils.database import get_db
+    from backend.models import FeedItem, User, UserEmail
+    from backend.schemas import FeedItemResponse, FeedResponse
+    from backend.routes.auth import get_current_user
+    from backend.utils.link_preview import fetch_link_preview
+except ImportError:
+    from utils.database import get_db
+    from models import FeedItem, User, UserEmail
+    from schemas import FeedItemResponse, FeedResponse
+    from routes.auth import get_current_user
+    from utils.link_preview import fetch_link_preview
 
 router = APIRouter(prefix="/api/feed", tags=["feed"])
 

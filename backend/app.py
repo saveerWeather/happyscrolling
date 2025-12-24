@@ -2,8 +2,15 @@
 import sys
 from pathlib import Path
 
-# Add project root to Python path (before any backend imports)
-project_root = Path(__file__).parent.parent
+# Add current directory and project root to Python path
+# This works whether running from project root or backend directory
+current_dir = Path(__file__).parent
+project_root = current_dir.parent
+
+# Add current directory first (for Railway when root is /backend)
+if str(current_dir) not in sys.path:
+    sys.path.insert(0, str(current_dir))
+# Add project root (for local development)
 if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
 
@@ -19,9 +26,17 @@ except ImportError:
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.sessions import SessionMiddleware
-from backend.config import settings
-from backend.utils.database import engine, Base
-from backend.routes import auth, feed, settings as settings_routes
+
+# Try imports with backend prefix first, fallback to direct imports
+try:
+    from backend.config import settings
+    from backend.utils.database import engine, Base
+    from backend.routes import auth, feed, settings as settings_routes
+except ImportError:
+    # Running from backend directory - use direct imports
+    from config import settings
+    from utils.database import engine, Base
+    from routes import auth, feed, settings as settings_routes
 
 # Create database tables
 Base.metadata.create_all(bind=engine)
@@ -65,7 +80,11 @@ def health():
 @app.get("/debug/db")
 def debug_db():
     """Debug endpoint to see which database is being used"""
-    from backend.utils.database import DATABASE_URL, USE_POSTGRES
+    try:
+        from backend.utils.database import DATABASE_URL, USE_POSTGRES
+    except ImportError:
+        from utils.database import DATABASE_URL, USE_POSTGRES
+    
     db_type = "PostgreSQL" if USE_POSTGRES and not DATABASE_URL.startswith('sqlite') else "SQLite"
     # Hide password in URL for security
     safe_url = DATABASE_URL
