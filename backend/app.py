@@ -1,13 +1,15 @@
 """FastAPI application"""
 import sys
+import os
 from pathlib import Path
 
 # Add current directory and project root to Python path
 # This works whether running from project root or backend directory
-current_dir = Path(__file__).parent
-project_root = current_dir.parent
+current_dir = Path(__file__).parent.resolve()
+project_root = current_dir.parent.resolve()
 
 # Add current directory first (for Railway when root is /backend)
+# This MUST be first so imports work when running from backend directory
 if str(current_dir) not in sys.path:
     sys.path.insert(0, str(current_dir))
 # Add project root (for local development)
