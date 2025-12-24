@@ -1,14 +1,31 @@
 """Settings routes for email management"""
 import sys
 from pathlib import Path
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+
+# Add paths for imports
+current_dir = Path(__file__).parent
+backend_dir = current_dir.parent
+project_root = backend_dir.parent
+
+if str(backend_dir) not in sys.path:
+    sys.path.insert(0, str(backend_dir))
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from backend.utils.database import get_db
-from backend.models import User, UserEmail, FeedItem
-from backend.schemas import UserEmailResponse, AddEmailRequest
-from backend.routes.auth import get_current_user
+
+# Try imports with backend prefix first, fallback to direct imports
+try:
+    from backend.utils.database import get_db
+    from backend.models import User, UserEmail, FeedItem
+    from backend.schemas import UserEmailResponse, AddEmailRequest
+    from backend.routes.auth import get_current_user
+except ImportError:
+    from utils.database import get_db
+    from models import User, UserEmail, FeedItem
+    from schemas import UserEmailResponse, AddEmailRequest
+    from routes.auth import get_current_user
 
 router = APIRouter(prefix="/api/settings", tags=["settings"])
 

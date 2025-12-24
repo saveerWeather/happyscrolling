@@ -10,12 +10,24 @@ import sys
 from pathlib import Path
 import time
 
-# Add project root to path
-sys.path.insert(0, str(Path(__file__).parent.parent))
+# Add paths for imports
+current_dir = Path(__file__).parent
+project_root = current_dir.parent
 
-from backend.utils.database import get_raw_connection
-from backend.config import settings
-from backend.utils.link_preview import fetch_link_preview
+if str(current_dir) not in sys.path:
+    sys.path.insert(0, str(current_dir))
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
+
+# Try imports with backend prefix first, fallback to direct imports
+try:
+    from backend.utils.database import get_raw_connection
+    from backend.config import settings
+    from backend.utils.link_preview import fetch_link_preview
+except ImportError:
+    from utils.database import get_raw_connection
+    from config import settings
+    from utils.link_preview import fetch_link_preview
 
 # Try PostgreSQL, fallback to SQLite
 try:

@@ -1,12 +1,25 @@
 """Database models"""
 import sys
 from pathlib import Path
-sys.path.insert(0, str(Path(__file__).parent.parent))
+
+# Add paths for imports
+current_dir = Path(__file__).parent
+project_root = current_dir.parent
+
+if str(current_dir) not in sys.path:
+    sys.path.insert(0, str(current_dir))
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
 
 from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean, Text
 from sqlalchemy.orm import relationship
 from datetime import datetime
-from backend.utils.database import Base
+
+# Try imports with backend prefix first, fallback to direct imports
+try:
+    from backend.utils.database import Base
+except ImportError:
+    from utils.database import Base
 
 class User(Base):
     __tablename__ = "users"

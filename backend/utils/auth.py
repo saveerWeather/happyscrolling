@@ -1,13 +1,27 @@
 """Authentication utilities"""
 import sys
 from pathlib import Path
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+
+# Add paths for imports
+current_dir = Path(__file__).parent
+backend_dir = current_dir.parent
+project_root = backend_dir.parent
+
+if str(backend_dir) not in sys.path:
+    sys.path.insert(0, str(backend_dir))
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
 
 from datetime import datetime, timedelta
 from typing import Optional
 from jose import JWTError, jwt
 import bcrypt
-from backend.config import settings
+
+# Try imports with backend prefix first, fallback to direct imports
+try:
+    from backend.config import settings
+except ImportError:
+    from config import settings
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """Verify a password against a hash"""
