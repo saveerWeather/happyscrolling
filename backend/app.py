@@ -29,16 +29,11 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 
-# Try imports with backend prefix first, fallback to direct imports
-try:
-    from backend.config import settings
-    from backend.utils.database import engine, Base
-    from backend.routes import auth, feed, settings as settings_routes
-except ImportError:
-    # Running from backend directory - use direct imports
-    from config import settings
-    from utils.database import engine, Base
-    from routes import auth, feed, settings as settings_routes
+# Use direct imports (Railway runs from /backend directory)
+# The path setup above ensures these imports work
+from config import settings
+from utils.database import engine, Base
+from routes import auth, feed, settings as settings_routes
 
 # Create database tables
 Base.metadata.create_all(bind=engine)
@@ -82,10 +77,7 @@ def health():
 @app.get("/debug/db")
 def debug_db():
     """Debug endpoint to see which database is being used"""
-    try:
-        from backend.utils.database import DATABASE_URL, USE_POSTGRES
-    except ImportError:
-        from utils.database import DATABASE_URL, USE_POSTGRES
+    from utils.database import DATABASE_URL, USE_POSTGRES
     
     db_type = "PostgreSQL" if USE_POSTGRES and not DATABASE_URL.startswith('sqlite') else "SQLite"
     # Hide password in URL for security
