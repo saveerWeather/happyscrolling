@@ -1,3 +1,14 @@
 beautifulsoup4
 requests
 psycopg2-binary
+fastapi
+uvicorn[standard]
+sqlalchemy
+python-jose[cryptography]
+bcrypt
+python-multipart
+pydantic[email]
+pydantic-settings
+email-validator
+python-dotenv
+itsdangerous
