@@ -7,22 +7,24 @@ import os
 import signal
 import sys
 import time
+import sqlite3  # Move this outside - it's built-in
 
-# Try PostgreSQL first, fallback to SQLite for local dev
+# Try PostgreSQL, fallback to SQLite
 try:
     import psycopg2
     from psycopg2.extras import RealDictCursor
     USE_POSTGRES = True
 except ImportError:
-    import sqlite3
     USE_POSTGRES = False
+
+# Rest of the code stays the same...
 
 # ==================== CONFIG ====================
 
 GMAIL_USER = os.getenv('GMAIL_USER', 'addtofeed2@gmail.com')
 GMAIL_PASSWORD = os.getenv('GMAIL_PASSWORD', 'yxnbxbocasotkfix')
 CHECK_INTERVAL = int(os.getenv('CHECK_INTERVAL', '30'))
-DATABASE_URL = os.getenv('DATABASE_URL')  # Railway provides this
+DATABASE_URL = os.getenv('DATABASE_URL','postgresql://postgres:KKhvvCphcBkLEhvFAyJRhFMHWJACnlTD@caboose.proxy.rlwy.net:29590/railway')  # Railway provides this
 
 # ==================== DATABASE ====================
 
