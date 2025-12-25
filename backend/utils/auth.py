@@ -22,11 +22,28 @@ from config import settings
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """Verify a password against a hash"""
+    import logging
+    logger = logging.getLogger(__name__)
+    
     try:
+        if not plain_password or not hashed_password:
+            logger.warning("verify_password: Empty password or hash")
+            return False
+        
         password_bytes = plain_password.encode('utf-8')
         hashed_bytes = hashed_password.encode('utf-8')
-        return bcrypt.checkpw(password_bytes, hashed_bytes)
-    except Exception:
+        
+        # Check if hash looks valid (bcrypt hashes start with $2a$, $2b$, or $2y$)
+        if not hashed_password.startswith('$2'):
+            logger.error(f"verify_password: Invalid hash format (doesn't start with $2): {hashed_password[:20]}...")
+            return False
+        
+        result = bcrypt.checkpw(password_bytes, hashed_bytes)
+        if not result:
+            logger.warning(f"verify_password: Password mismatch (hash: {hashed_password[:20]}...)")
+        return result
+    except Exception as e:
+        logger.error(f"verify_password error: {e}", exc_info=True)
         return False
 
 def get_password_hash(password: str) -> str:
