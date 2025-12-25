@@ -32,7 +32,9 @@ class Settings:
     @property
     def cors_origins(self) -> List[str]:
         """Convert comma-separated string to list"""
-        return [origin.strip() for origin in self._cors_origins_str.split(',')]
+        # Remove trailing slashes and strip whitespace
+        origins = [origin.strip().rstrip('/') for origin in self._cors_origins_str.split(',')]
+        return origins
     
     # Email worker
     gmail_user: str = os.getenv('GMAIL_USER', 'addtofeed2@gmail.com')
