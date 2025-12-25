@@ -2,13 +2,26 @@
 
 ## 502 Bad Gateway Error
 
-If you're seeing 502 errors, it means Railway's edge server can't reach your backend service. Check:
+If you're seeing 502 errors, it means Railway's edge server can't reach your backend service. The backend application isn't running or isn't responding.
 
-### 1. Service Type
+### 1. Check Deployment Logs (MOST IMPORTANT)
 - Go to your backend service in Railway
-- Click on "Settings"
-- Ensure **Service Type** is set to **"Web Service"** (NOT "Static Site")
-- If it's set to "Static Site", Railway's edge server will intercept requests
+- Click on "Deployments" tab
+- Click on the latest deployment
+- Click "View Logs" or "View Build Logs"
+- **Look for**:
+  - "Starting FastAPI application..."
+  - "App imported successfully"  
+  - "Starting server on port XXXX"
+  - Any Python errors or tracebacks
+- **If you see errors**, that's why it's not starting
+
+### 2. Verify Start Command
+- Go to your backend service → **Settings** → **Deploy** tab
+- Check the **Start Command** field
+- It should be: `python main.py`
+- OR: `uvicorn app:app --host 0.0.0.0 --port $PORT`
+- Make sure there are no typos
 
 ### 2. Start Command
 Verify your start command in Railway:
