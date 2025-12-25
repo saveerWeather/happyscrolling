@@ -18,27 +18,44 @@ if __name__ == "__main__":
     import uvicorn
     import logging
     
-    logging.basicConfig(level=logging.INFO)
+    # Configure logging to output to stdout (Railway captures this)
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        handlers=[logging.StreamHandler(sys.stdout)]
+    )
     logger = logging.getLogger(__name__)
     
     try:
+        logger.info("=" * 50)
         logger.info("Starting FastAPI application...")
+        logger.info(f"Python version: {sys.version}")
+        logger.info(f"Working directory: {os.getcwd()}")
+        logger.info(f"PORT environment variable: {os.getenv('PORT', 'NOT SET')}")
+        logger.info("=" * 50)
+        
         # Import app directly instead of using string import
         # This ensures all path setup happens before uvicorn tries to load it
+        logger.info("Importing app...")
         from app import app
-        logger.info("App imported successfully")
+        logger.info("✓ App imported successfully")
         
         # Use PORT from environment (Railway provides this) or default to 8000
         port = int(os.getenv("PORT", 8000))
-        logger.info(f"Starting server on port {port}")
+        logger.info(f"Starting server on 0.0.0.0:{port}")
+        logger.info("=" * 50)
         
         uvicorn.run(
             app,
             host="0.0.0.0",
             port=port,
             reload=False,  # Disable reload in production
+            log_level="info",
         )
     except Exception as e:
-        logger.error(f"Failed to start application: {e}", exc_info=True)
-        raise
+        logger.error("=" * 50)
+        logger.error(f"CRITICAL: Failed to start application: {e}", exc_info=True)
+        logger.error("=" * 50)
+        # Don't raise - let Railway see the error in logs
+        sys.exit(1)
 

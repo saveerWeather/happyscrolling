@@ -37,9 +37,26 @@ logger = logging.getLogger(__name__)
 
 # Use direct imports (Railway runs from /backend directory)
 # The path setup above ensures these imports work
-from config import settings
-from utils.database import engine, Base
-from routes import auth, feed, settings as settings_routes
+try:
+    from config import settings
+    logger.info("Settings imported successfully")
+except Exception as e:
+    logger.error(f"Failed to import settings: {e}", exc_info=True)
+    raise
+
+try:
+    from utils.database import engine, Base
+    logger.info("Database utilities imported successfully")
+except Exception as e:
+    logger.error(f"Failed to import database utilities: {e}", exc_info=True)
+    raise
+
+try:
+    from routes import auth, feed, settings as settings_routes
+    logger.info("Routes imported successfully")
+except Exception as e:
+    logger.error(f"Failed to import routes: {e}", exc_info=True)
+    raise
 
 # Log CORS origins for debugging
 logger.info(f"CORS origins configured: {settings.cors_origins}")
@@ -55,11 +72,16 @@ except Exception as e:
     logger.error(f"Failed to create database tables: {e}", exc_info=True)
     # Don't crash - tables might already exist
 
-app = FastAPI(
-    title="Happy Scrolling API",
-    description="Email feed aggregator API",
-    version="1.0.0"
-)
+try:
+    app = FastAPI(
+        title="Happy Scrolling API",
+        description="Email feed aggregator API",
+        version="1.0.0"
+    )
+    logger.info("FastAPI app created successfully")
+except Exception as e:
+    logger.error(f"Failed to create FastAPI app: {e}", exc_info=True)
+    raise
 
 # CORS middleware (MUST be before Session middleware for preflight requests)
 # Log what we're actually using
@@ -94,12 +116,25 @@ app.add_middleware(
 # Session middleware (after CORS)
 # Use "none" for cross-origin support (required for Railway where frontend/backend are different domains)
 # This allows cookies to be sent cross-origin when using HTTPS
-app.add_middleware(
-    SessionMiddleware,
-    secret_key=settings.jwt_secret,  # Reuse JWT secret for session signing
-    max_age=60 * 60 * 24 * 7,  # 7 days
-    same_site="none",
-)
+# Note: same_site="none" requires Secure cookies (HTTPS), which Railway provides
+try:
+    app.add_middleware(
+        SessionMiddleware,
+        secret_key=settings.jwt_secret,  # Reuse JWT secret for session signing
+        max_age=60 * 60 * 24 * 7,  # 7 days
+        same_site="none",
+    )
+    logger.info("SessionMiddleware configured successfully")
+except Exception as e:
+    logger.error(f"Failed to configure SessionMiddleware: {e}", exc_info=True)
+    # Fallback to lax for local development
+    app.add_middleware(
+        SessionMiddleware,
+        secret_key=settings.jwt_secret,
+        max_age=60 * 60 * 24 * 7,
+        same_site="lax",
+    )
+    logger.warning("Using same_site='lax' as fallback")
 
 # Add request logging middleware (after CORS)
 @app.middleware("http")
