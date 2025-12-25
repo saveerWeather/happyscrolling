@@ -45,12 +45,14 @@ if __name__ == "__main__":
         logger.info(f"Starting server on 0.0.0.0:{port}")
         logger.info("=" * 50)
         
+        logger.info("Starting uvicorn server...")
         uvicorn.run(
             app,
             host="0.0.0.0",
             port=port,
             reload=False,  # Disable reload in production
             log_level="info",
+            access_log=True,  # Enable access logs
         )
     except Exception as e:
         logger.error("=" * 50)

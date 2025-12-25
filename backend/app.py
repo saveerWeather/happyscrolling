@@ -167,7 +167,15 @@ def root():
 
 @app.get("/health")
 def health():
-    return {"status": "healthy"}
+    """Health check endpoint for Railway"""
+    return {"status": "healthy", "service": "backend"}
+
+@app.on_event("startup")
+async def startup_event():
+    """Log when the application is fully started"""
+    logger.info("=" * 50)
+    logger.info("FastAPI application is ready to accept requests")
+    logger.info("=" * 50)
 
 @app.get("/debug/db")
 def debug_db():
