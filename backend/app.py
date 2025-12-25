@@ -148,13 +148,21 @@ async def log_requests(request: Request, call_next):
         access_control_headers = request.headers.get("access-control-request-headers", "not set")
         logger.info(f"OPTIONS preflight - method: {access_control_method}, headers: {access_control_headers}")
     
-    response = await call_next(request)
-    # Log CORS headers in response
-    cors_origin = response.headers.get("access-control-allow-origin", "not set")
-    cors_methods = response.headers.get("access-control-allow-methods", "not set")
-    cors_headers = response.headers.get("access-control-allow-headers", "not set")
-    logger.info(f"{request.method} {request.url.path} - {response.status_code} | CORS origin: {cors_origin}, methods: {cors_methods}, headers: {cors_headers}")
-    return response
+    try:
+        response = await call_next(request)
+        # Log CORS headers in response
+        cors_origin = response.headers.get("access-control-allow-origin", "not set")
+        cors_methods = response.headers.get("access-control-allow-methods", "not set")
+        cors_headers = response.headers.get("access-control-allow-headers", "not set")
+        logger.info(f"{request.method} {request.url.path} - {response.status_code} | CORS origin: {cors_origin}, methods: {cors_methods}, headers: {cors_headers}")
+        return response
+    except Exception as e:
+        logger.error(f"Error processing {request.method} {request.url.path}: {e}", exc_info=True)
+        from fastapi.responses import JSONResponse
+        return JSONResponse(
+            status_code=500,
+            content={"status": "error", "message": str(e)}
+        )
 
 # Include routers
 app.include_router(auth.router)
@@ -163,12 +171,21 @@ app.include_router(settings_routes.router)
 
 @app.get("/")
 def root():
-    return {"message": "Happy Scrolling API", "status": "running"}
+    try:
+        return {"message": "Happy Scrolling API", "status": "running"}
+    except Exception as e:
+        logger.error(f"Root endpoint failed: {e}", exc_info=True)
+        return {"status": "error", "error": str(e)}, 500
 
 @app.get("/health")
 def health():
     """Health check endpoint for Railway"""
-    return {"status": "healthy", "service": "backend"}
+    try:
+        # Simple health check - no database or complex operations
+        return {"status": "healthy", "service": "backend"}
+    except Exception as e:
+        logger.error(f"Health check failed: {e}", exc_info=True)
+        return {"status": "error", "error": str(e)}, 500
 
 @app.on_event("startup")
 async def startup_event():
