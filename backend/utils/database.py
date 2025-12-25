@@ -30,11 +30,28 @@ except ImportError:
 
 DATABASE_URL = os.getenv('DATABASE_URL', 'sqlite:///feed.db')
 
+# Log database configuration
+import logging
+logger = logging.getLogger(__name__)
+logger.info(f"DATABASE_URL is set: {bool(DATABASE_URL)}")
+logger.info(f"DATABASE_URL starts with: {DATABASE_URL[:20] if DATABASE_URL else 'None'}...")
+logger.info(f"USE_POSTGRES: {USE_POSTGRES}")
+logger.info(f"Will use PostgreSQL: {USE_POSTGRES and DATABASE_URL and not DATABASE_URL.startswith('sqlite')}")
+
 # For SQLite, use file path
 if DATABASE_URL.startswith('sqlite'):
+    logger.info("Using SQLite database")
     engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 else:
     # PostgreSQL
+    logger.info("Using PostgreSQL database")
+    # Hide password in log
+    safe_url = DATABASE_URL
+    if '@' in DATABASE_URL:
+        parts = DATABASE_URL.split('@')
+        if len(parts) == 2:
+            safe_url = parts[0].split('//')[0] + '//***@' + parts[1]
+    logger.info(f"PostgreSQL connection string: {safe_url}")
     engine = create_engine(DATABASE_URL)
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

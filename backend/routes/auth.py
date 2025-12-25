@@ -65,8 +65,11 @@ def register(user_data: UserRegister, request: Request, db: Session = Depends(ge
             password_hash=hashed_password
         )
         db.add(new_user)
+        logger.info(f"Added user to session, committing to database...")
         db.commit()
+        logger.info(f"Commit successful, refreshing user...")
         db.refresh(new_user)
+        logger.info(f"User refreshed, ID: {new_user.id}, Email: {new_user.email}")
         
         # Set user ID in session (auto-login after registration)
         request.session["user_id"] = new_user.id
