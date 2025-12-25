@@ -179,14 +179,23 @@ async def log_requests(request: Request, call_next):
         cors_origin = response.headers.get("access-control-allow-origin", "not set")
         cors_methods = response.headers.get("access-control-allow-methods", "not set")
         cors_headers = response.headers.get("access-control-allow-headers", "not set")
+        cors_credentials = response.headers.get("access-control-allow-credentials", "not set")
         
         # Log Set-Cookie headers in response
         set_cookie_headers = [h for h in response.headers.get_list("set-cookie")]
-        logger.info(f"{request.method} {request.url.path} - {response.status_code} | CORS origin: {cors_origin}, Set-Cookie headers: {len(set_cookie_headers)}")
+        logger.info(f"{request.method} {request.url.path} - {response.status_code} | CORS origin: {cors_origin}, credentials: {cors_credentials}, Set-Cookie headers: {len(set_cookie_headers)}")
+        
+        # For OPTIONS preflight, credentials header is critical
+        if request.method == "OPTIONS":
+            if cors_credentials != "true":
+                logger.warning(f"⚠️ OPTIONS preflight missing Access-Control-Allow-Credentials: true! Got: {cors_credentials}")
+            else:
+                logger.info("✓ OPTIONS preflight includes Access-Control-Allow-Credentials: true")
+        
         if set_cookie_headers:
             for cookie in set_cookie_headers:
-                # Log first 100 chars of cookie (to see Secure, SameSite, etc)
-                logger.info(f"  Cookie: {cookie[:100]}...")
+                # Log first 150 chars of cookie (to see Secure, SameSite, etc)
+                logger.info(f"  Cookie: {cookie[:150]}...")
         
         return response
     except Exception as e:
