@@ -45,8 +45,24 @@ except Exception as e:
     raise
 
 try:
-    from utils.database import engine, Base
+    from utils.database import engine, Base, DATABASE_URL, USE_POSTGRES
     logger.info("Database utilities imported successfully")
+    # Log database configuration (after logging is configured)
+    logger.info(f"DATABASE_URL is set: {bool(DATABASE_URL)}")
+    logger.info(f"DATABASE_URL starts with: {DATABASE_URL[:20] if DATABASE_URL else 'None'}...")
+    logger.info(f"USE_POSTGRES: {USE_POSTGRES}")
+    is_postgres = USE_POSTGRES and DATABASE_URL and not DATABASE_URL.startswith('sqlite')
+    logger.info(f"Will use PostgreSQL: {is_postgres}")
+    if is_postgres:
+        # Hide password in log
+        safe_url = DATABASE_URL
+        if '@' in DATABASE_URL:
+            parts = DATABASE_URL.split('@')
+            if len(parts) == 2:
+                safe_url = parts[0].split('//')[0] + '//***@' + parts[1]
+        logger.info(f"PostgreSQL connection string: {safe_url}")
+    else:
+        logger.info("Using SQLite database")
 except Exception as e:
     logger.error(f"Failed to import database utilities: {e}", exc_info=True)
     raise
