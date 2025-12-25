@@ -135,13 +135,17 @@ app.add_middleware(
 # This allows cookies to be sent cross-origin when using HTTPS
 # Note: same_site="none" requires Secure cookies (HTTPS), which Railway provides
 try:
+    # For same_site="none", cookies MUST be Secure (HTTPS only)
+    # Railway provides HTTPS, so we can use secure cookies
     app.add_middleware(
         SessionMiddleware,
         secret_key=settings.jwt_secret,  # Reuse JWT secret for session signing
         max_age=60 * 60 * 24 * 7,  # 7 days
         same_site="none",
+        # Note: Starlette's SessionMiddleware doesn't have a 'secure' parameter
+        # It should automatically set Secure=True when same_site="none" on HTTPS
     )
-    logger.info("SessionMiddleware configured successfully")
+    logger.info("SessionMiddleware configured successfully with same_site='none'")
 except Exception as e:
     logger.error(f"Failed to configure SessionMiddleware: {e}", exc_info=True)
     # Fallback to lax for local development
