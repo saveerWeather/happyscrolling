@@ -192,8 +192,9 @@ async def secure_session_cookies(request: Request, call_next):
         # If we modified cookies, update all Set-Cookie headers
         if modified:
             # Remove all existing Set-Cookie headers
-            while "set-cookie" in response.headers:
-                response.headers.pop("set-cookie")
+            # MutableHeaders doesn't have pop(), so we delete the key which removes all values
+            if "set-cookie" in response.headers:
+                del response.headers["set-cookie"]
             # Add back all cookies (with Secure added to session)
             for cookie in new_cookies:
                 response.headers.append("set-cookie", cookie)
