@@ -225,3 +225,21 @@ def debug_cors(request: Request):
         "cors_headers": cors_headers,
     }
 
+@app.get("/debug/users")
+def debug_users(db: Session = Depends(get_db)):
+    """Debug endpoint to list all users (email only for security)"""
+    from models import User
+    users = db.query(User).all()
+    return {
+        "total_users": len(users),
+        "users": [
+            {
+                "id": user.id,
+                "email": user.email,
+                "username": user.username,
+                "created_at": str(user.created_at)
+            }
+            for user in users
+        ]
+    }
+
