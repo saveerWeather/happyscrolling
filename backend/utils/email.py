@@ -1,21 +1,29 @@
 """Email sending utilities"""
 import os
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
 from typing import Optional
 import logging
 
 logger = logging.getLogger(__name__)
 
+# Try to import resend, fall back to SMTP if not available
+try:
+    import resend
+    RESEND_AVAILABLE = True
+except ImportError:
+    RESEND_AVAILABLE = False
+    logger.warning("Resend not installed, email functionality will be limited")
+
 class EmailService:
     def __init__(self):
-        self.smtp_host = os.getenv('SMTP_HOST', 'smtp.gmail.com')
-        self.smtp_port = int(os.getenv('SMTP_PORT', '587'))
-        self.smtp_user = os.getenv('SMTP_USER', '')
-        self.smtp_password = os.getenv('SMTP_PASSWORD', '')
-        self.from_email = os.getenv('FROM_EMAIL', self.smtp_user)
+        self.resend_api_key = os.getenv('RESEND_API_KEY', '')
+        self.from_email = os.getenv('FROM_EMAIL', 'onboarding@resend.dev')
         self.from_name = os.getenv('FROM_NAME', 'Busyplates')
+
+        if self.resend_api_key and RESEND_AVAILABLE:
+            resend.api_key = self.resend_api_key
+            logger.info("Email service configured with Resend")
+        else:
+            logger.warning("Resend API key not configured")
 
     def send_email(
         self,
@@ -24,26 +32,27 @@ class EmailService:
         html_body: str,
         text_body: Optional[str] = None
     ) -> bool:
-        """Send an email"""
-        if not self.smtp_user or not self.smtp_password:
-            logger.error("SMTP credentials not configured")
+        """Send an email using Resend"""
+        if not self.resend_api_key:
+            logger.error("Resend API key not configured")
+            return False
+
+        if not RESEND_AVAILABLE:
+            logger.error("Resend package not installed")
             return False
 
         try:
-            msg = MIMEMultipart('alternative')
-            msg['Subject'] = subject
-            msg['From'] = f'{self.from_name} <{self.from_email}>'
-            msg['To'] = to_email
+            params = {
+                "from": f"{self.from_name} <{self.from_email}>",
+                "to": to_email,
+                "subject": subject,
+                "html": html_body
+            }
 
             if text_body:
-                msg.attach(MIMEText(text_body, 'plain'))
-            msg.attach(MIMEText(html_body, 'html'))
+                params["text"] = text_body
 
-            with smtplib.SMTP(self.smtp_host, self.smtp_port) as server:
-                server.starttls()
-                server.login(self.smtp_user, self.smtp_password)
-                server.send_message(msg)
-
+            resend.Emails.send(params)
             logger.info(f"Email sent to {to_email}")
             return True
 
