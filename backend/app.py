@@ -28,12 +28,20 @@ except ImportError:
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.sessions import SessionMiddleware
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Use direct imports (Railway runs from /backend directory)
 # The path setup above ensures these imports work
 from config import settings
 from utils.database import engine, Base
 from routes import auth, feed, settings as settings_routes
+
+# Log CORS origins for debugging
+logger.info(f"CORS origins: {settings.cors_origins}")
 
 # Create database tables
 Base.metadata.create_all(bind=engine)
@@ -60,6 +68,14 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Add request logging middleware
+@app.middleware("http")
+async def log_requests(request, call_next):
+    logger.info(f"{request.method} {request.url.path}")
+    response = await call_next(request)
+    logger.info(f"{request.method} {request.url.path} - {response.status_code}")
+    return response
 
 # Include routers
 app.include_router(auth.router)

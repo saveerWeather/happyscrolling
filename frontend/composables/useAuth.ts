@@ -25,25 +25,36 @@ export const useAuth = () => {
 
   const login = async (credentials: LoginCredentials) => {
     const config = useRuntimeConfig()
+    const apiUrl = config.public.apiUrl
     
-    const response = await fetch(`${config.public.apiUrl}/api/auth/login`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      credentials: 'include', // Important for sessions
-      body: JSON.stringify(credentials)
-    })
+    console.log('Login attempt to:', `${apiUrl}/api/auth/login`)
     
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({ detail: 'Login failed' }))
-      throw new Error(error.detail || 'Login failed')
+    try {
+      const response = await fetch(`${apiUrl}/api/auth/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        credentials: 'include', // Important for sessions
+        body: JSON.stringify(credentials)
+      })
+      
+      console.log('Login response status:', response.status)
+      
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ detail: 'Login failed' }))
+        console.error('Login error:', error)
+        throw new Error(error.detail || 'Login failed')
+      }
+      
+      const user = await response.json()
+      authStore.setUser(user)
+      
+      return user
+    } catch (error) {
+      console.error('Login exception:', error)
+      throw error
     }
-    
-    const user = await response.json()
-    authStore.setUser(user)
-    
-    return user
   }
 
   const register = async (data: RegisterData) => {
