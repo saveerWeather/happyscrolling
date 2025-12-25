@@ -46,7 +46,7 @@ except Exception as e:
     raise
 
 try:
-    from utils.database import engine, Base, DATABASE_URL, USE_POSTGRES
+    from utils.database import engine, Base, DATABASE_URL, USE_POSTGRES, get_db
     logger.info("Database utilities imported successfully")
     # Log database configuration (after logging is configured)
     logger.info(f"DATABASE_URL is set: {bool(DATABASE_URL)}")
@@ -246,7 +246,6 @@ def debug_cors(request: Request):
 def debug_users(db: Session = Depends(get_db)):
     """Debug endpoint to list all users (email only for security)"""
     from models import User
-    from utils.database import get_db
     users = db.query(User).all()
     return {
         "total_users": len(users),
