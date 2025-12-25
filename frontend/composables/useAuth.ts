@@ -27,23 +27,18 @@ export const useAuth = () => {
     const config = useRuntimeConfig()
     const apiUrl = config.public.apiUrl
     
-    console.log('Login attempt to:', `${apiUrl}/api/auth/login`)
-    
     try {
       const response = await fetch(`${apiUrl}/api/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
-        credentials: 'include', // Important for sessions
+        credentials: 'include',
         body: JSON.stringify(credentials)
       })
       
-      console.log('Login response status:', response.status)
-      
       if (!response.ok) {
         const error = await response.json().catch(() => ({ detail: 'Login failed' }))
-        console.error('Login error:', error)
         throw new Error(error.detail || 'Login failed')
       }
       
@@ -52,25 +47,19 @@ export const useAuth = () => {
       
       return user
     } catch (error) {
-      console.error('Login exception:', error)
       throw error
     }
   }
 
   const register = async (data: RegisterData) => {
     const user = await api.post<User>('/api/auth/register', data)
-    // Auto-login after registration
-    await login({ email: data.email, password: data.password })
+    authStore.setUser(user)
     return user
   }
 
   const logout = async () => {
-    const config = useRuntimeConfig()
     try {
-      await fetch(`${config.public.apiUrl}/api/auth/logout`, {
-        method: 'POST',
-        credentials: 'include'
-      })
+      await api.post('/api/auth/logout', {})
     } catch (error) {
       console.error('Logout error:', error)
     }
@@ -80,17 +69,7 @@ export const useAuth = () => {
 
   const fetchUser = async () => {
     try {
-      const config = useRuntimeConfig()
-      const response = await fetch(`${config.public.apiUrl}/api/auth/me`, {
-        method: 'GET',
-        credentials: 'include' // Important for sessions
-      })
-      
-      if (!response.ok) {
-        throw new Error('Not authenticated')
-      }
-      
-      const user = await response.json()
+      const user = await api.get<User>('/api/auth/me')
       authStore.setUser(user)
       return user
     } catch (error) {

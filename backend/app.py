@@ -49,64 +49,33 @@ except Exception as e:
 
 try:
     from utils.database import engine, Base, DATABASE_URL, USE_POSTGRES, get_db
-    logger.info("Database utilities imported successfully")
-    # Log database configuration (after logging is configured)
-    logger.info(f"DATABASE_URL is set: {bool(DATABASE_URL)}")
-    logger.info(f"DATABASE_URL starts with: {DATABASE_URL[:20] if DATABASE_URL else 'None'}...")
-    logger.info(f"USE_POSTGRES: {USE_POSTGRES}")
     is_postgres = USE_POSTGRES and DATABASE_URL and not DATABASE_URL.startswith('sqlite')
-    logger.info(f"Will use PostgreSQL: {is_postgres}")
-    if is_postgres:
-        # Hide password in log
-        safe_url = DATABASE_URL
-        if '@' in DATABASE_URL:
-            parts = DATABASE_URL.split('@')
-            if len(parts) == 2:
-                safe_url = parts[0].split('//')[0] + '//***@' + parts[1]
-        logger.info(f"PostgreSQL connection string: {safe_url}")
-    else:
-        logger.info("Using SQLite database")
+    logger.info(f"Database: {'PostgreSQL' if is_postgres else 'SQLite'}")
 except Exception as e:
-    logger.error(f"Failed to import database utilities: {e}", exc_info=True)
+    logger.error(f"Failed to import database utilities: {e}")
     raise
 
 try:
     from routes import auth, feed, settings as settings_routes
-    logger.info("Routes imported successfully")
 except Exception as e:
-    logger.error(f"Failed to import routes: {e}", exc_info=True)
+    logger.error(f"Failed to import routes: {e}")
     raise
 
-# Log CORS origins for debugging
-logger.info(f"CORS origins configured: {settings.cors_origins}")
-logger.info(f"CORS origins type: {type(settings.cors_origins)}")
-logger.info(f"CORS origins length: {len(settings.cors_origins)}")
+logger.info(f"CORS origins: {settings.cors_origins}")
 
-# Create database tables (with error handling)
+# Create database tables
 try:
-    logger.info("Creating database tables...")
     Base.metadata.create_all(bind=engine)
-    logger.info("Database tables created successfully")
 except Exception as e:
-    logger.error(f"Failed to create database tables: {e}", exc_info=True)
-    # Don't crash - tables might already exist
+    logger.error(f"Failed to create database tables: {e}")
 
-try:
-    app = FastAPI(
-        title="Happy Scrolling API",
-        description="Email feed aggregator API",
-        version="1.0.0"
-    )
-    logger.info("FastAPI app created successfully")
-except Exception as e:
-    logger.error(f"Failed to create FastAPI app: {e}", exc_info=True)
-    raise
+app = FastAPI(
+    title="Happy Scrolling API",
+    description="Email feed aggregator API",
+    version="1.0.0"
+)
 
-# CORS middleware (MUST be before Session middleware for preflight requests)
-# Log what we're actually using
-logger.info(f"Setting CORS with origins: {settings.cors_origins}")
-# CORS configuration - use explicit lists for compatibility
-# FastAPI's CORSMiddleware may not support ["*"] in all versions
+# CORS middleware
 cors_methods = ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH", "HEAD"]
 cors_headers = [
     "Content-Type",
@@ -132,118 +101,28 @@ app.add_middleware(
     max_age=3600,
 )
 
-# Session middleware (after CORS)
-# Use "none" for cross-origin support (required for Railway where frontend/backend are different domains)
-# This allows cookies to be sent cross-origin when using HTTPS
-# Note: same_site="none" requires Secure cookies (HTTPS), which Railway provides
-try:
-    # For same_site="none", cookies MUST be Secure (HTTPS only)
-    # Railway provides HTTPS, so we can use secure cookies
-    app.add_middleware(
-        SessionMiddleware,
-        secret_key=settings.jwt_secret,  # Reuse JWT secret for session signing
-        max_age=60 * 60 * 24 * 7,  # 7 days
-        same_site="none",
-        # Note: Starlette's SessionMiddleware doesn't have a 'secure' parameter
-        # It should automatically set Secure=True when same_site="none" on HTTPS
-    )
-    logger.info("SessionMiddleware configured successfully with same_site='none'")
-except Exception as e:
-    logger.error(f"Failed to configure SessionMiddleware: {e}", exc_info=True)
-    # Fallback to lax for local development
-    app.add_middleware(
-        SessionMiddleware,
-        secret_key=settings.jwt_secret,
-        max_age=60 * 60 * 24 * 7,
-        same_site="lax",
-    )
-    logger.warning("Using same_site='lax' as fallback")
+# Session middleware
+is_production = os.getenv("RAILWAY_ENVIRONMENT") is not None
 
-# Middleware to ensure session cookies have Secure flag when on HTTPS
-@app.middleware("http")
-async def secure_session_cookies(request: Request, call_next):
-    """Ensure session cookies have Secure flag for HTTPS (required for SameSite=None)"""
-    response = await call_next(request)
-    
-    # Check if we're on HTTPS (Railway provides this via X-Forwarded-Proto)
-    is_https = request.url.scheme == "https" or request.headers.get("x-forwarded-proto") == "https"
-    
-    if is_https:
-        # Get all Set-Cookie headers
-        set_cookie_headers = response.headers.getlist("set-cookie")
-        
-        # Find and fix session cookie if it exists
-        modified = False
-        new_cookies = []
-        for cookie_header in set_cookie_headers:
-            if cookie_header.startswith("session="):
-                # Check if Secure flag is missing
-                if "; Secure" not in cookie_header and " Secure" not in cookie_header:
-                    # Add Secure flag before samesite or at the end
-                    if "; samesite=" in cookie_header.lower():
-                        cookie_header = cookie_header.replace("; samesite=", "; Secure; samesite=", 1)
-                        cookie_header = cookie_header.replace("; SameSite=", "; Secure; SameSite=", 1)
-                    else:
-                        cookie_header = cookie_header + "; Secure"
-                    modified = True
-                    logger.info("Added Secure flag to session cookie")
-            new_cookies.append(cookie_header)
-        
-        # If we modified cookies, update all Set-Cookie headers
-        if modified:
-            # Remove all existing Set-Cookie headers
-            # MutableHeaders doesn't have pop(), so we delete the key which removes all values
-            if "set-cookie" in response.headers:
-                del response.headers["set-cookie"]
-            # Add back all cookies (with Secure added to session)
-            for cookie in new_cookies:
-                response.headers.append("set-cookie", cookie)
-    
-    return response
+app.add_middleware(
+    SessionMiddleware,
+    secret_key=settings.jwt_secret,
+    max_age=60 * 60 * 24 * 7,  # 7 days
+    same_site="none" if is_production else "lax",
+    https_only=is_production,
+)
+logger.info(f"Session: production={is_production}, same_site={'none' if is_production else 'lax'}")
 
-# Add request logging middleware (after CORS and session security)
+# Request logging
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
-    origin = request.headers.get("origin", "no origin")
-    logger.info(f"{request.method} {request.url.path} from origin: {origin}")
-    
-    # Log cookies in request
-    cookies = list(request.cookies.keys())
-    logger.info(f"{request.method} {request.url.path} - Request cookies: {cookies}")
-    
-    # Log preflight request details
-    if request.method == "OPTIONS":
-        access_control_method = request.headers.get("access-control-request-method", "not set")
-        access_control_headers = request.headers.get("access-control-request-headers", "not set")
-        logger.info(f"OPTIONS preflight - method: {access_control_method}, headers: {access_control_headers}")
-    
+    logger.info(f"{request.method} {request.url.path}")
     try:
         response = await call_next(request)
-        # Log CORS headers in response
-        cors_origin = response.headers.get("access-control-allow-origin", "not set")
-        cors_methods = response.headers.get("access-control-allow-methods", "not set")
-        cors_headers = response.headers.get("access-control-allow-headers", "not set")
-        cors_credentials = response.headers.get("access-control-allow-credentials", "not set")
-        
-        # Log Set-Cookie headers in response
-        set_cookie_headers = response.headers.getlist("set-cookie")
-        logger.info(f"{request.method} {request.url.path} - {response.status_code} | CORS origin: {cors_origin}, credentials: {cors_credentials}, Set-Cookie headers: {len(set_cookie_headers)}")
-        
-        # For OPTIONS preflight, credentials header is critical
-        if request.method == "OPTIONS":
-            if cors_credentials != "true":
-                logger.warning(f"⚠️ OPTIONS preflight missing Access-Control-Allow-Credentials: true! Got: {cors_credentials}")
-            else:
-                logger.info("✓ OPTIONS preflight includes Access-Control-Allow-Credentials: true")
-        
-        if set_cookie_headers:
-            for cookie in set_cookie_headers:
-                # Log first 150 chars of cookie (to see Secure, SameSite, etc)
-                logger.info(f"  Cookie: {cookie[:150]}...")
-        
+        logger.info(f"{request.method} {request.url.path} - {response.status_code}")
         return response
     except Exception as e:
-        logger.error(f"Error processing {request.method} {request.url.path}: {e}", exc_info=True)
+        logger.error(f"Error: {request.method} {request.url.path} - {e}")
         from fastapi.responses import JSONResponse
         return JSONResponse(
             status_code=500,
@@ -275,10 +154,7 @@ def health():
 
 @app.on_event("startup")
 async def startup_event():
-    """Log when the application is fully started"""
-    logger.info("=" * 50)
-    logger.info("FastAPI application is ready to accept requests")
-    logger.info("=" * 50)
+    logger.info("Application ready")
 
 @app.get("/debug/db")
 def debug_db():
