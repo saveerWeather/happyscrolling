@@ -28,6 +28,8 @@ except ImportError:
 from fastapi import FastAPI, Request, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.sessions import SessionMiddleware
+from starlette.middleware.trustedhost import TrustedHostMiddleware
+from starlette.middleware.httpsredirect import HTTPSRedirectMiddleware
 from starlette.responses import Response
 from sqlalchemy.orm import Session
 import logging
@@ -157,7 +159,48 @@ except Exception as e:
     )
     logger.warning("Using same_site='lax' as fallback")
 
-# Add request logging middleware (after CORS)
+# Middleware to ensure session cookies have Secure flag when on HTTPS
+@app.middleware("http")
+async def secure_session_cookies(request: Request, call_next):
+    """Ensure session cookies have Secure flag for HTTPS (required for SameSite=None)"""
+    response = await call_next(request)
+    
+    # Check if we're on HTTPS (Railway provides this via X-Forwarded-Proto)
+    is_https = request.url.scheme == "https" or request.headers.get("x-forwarded-proto") == "https"
+    
+    if is_https:
+        # Get all Set-Cookie headers
+        set_cookie_headers = response.headers.getlist("set-cookie")
+        
+        # Find and fix session cookie if it exists
+        modified = False
+        new_cookies = []
+        for cookie_header in set_cookie_headers:
+            if cookie_header.startswith("session="):
+                # Check if Secure flag is missing
+                if "; Secure" not in cookie_header and " Secure" not in cookie_header:
+                    # Add Secure flag before samesite or at the end
+                    if "; samesite=" in cookie_header.lower():
+                        cookie_header = cookie_header.replace("; samesite=", "; Secure; samesite=", 1)
+                        cookie_header = cookie_header.replace("; SameSite=", "; Secure; SameSite=", 1)
+                    else:
+                        cookie_header = cookie_header + "; Secure"
+                    modified = True
+                    logger.info("Added Secure flag to session cookie")
+            new_cookies.append(cookie_header)
+        
+        # If we modified cookies, update all Set-Cookie headers
+        if modified:
+            # Remove all existing Set-Cookie headers
+            while "set-cookie" in response.headers:
+                response.headers.pop("set-cookie")
+            # Add back all cookies (with Secure added to session)
+            for cookie in new_cookies:
+                response.headers.append("set-cookie", cookie)
+    
+    return response
+
+# Add request logging middleware (after CORS and session security)
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
     origin = request.headers.get("origin", "no origin")
