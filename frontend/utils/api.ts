@@ -6,13 +6,14 @@ export interface ApiResponse<T> {
 }
 
 function getApiUrl(): string {
+  const config = useRuntimeConfig()
   if (import.meta.server) {
-    // Server-side: use runtime config
-    const config = useRuntimeConfig()
-    return config.public.apiUrl
+    // Server-side: can use internal Railway domain (backend.railway.internal)
+    // This is faster and doesn't go through the public internet
+    return config.apiUrl || config.public.apiUrl
   } else {
-    // Client-side: use runtime config
-    const config = useRuntimeConfig()
+    // Client-side: MUST use public domain for CORS to work
+    // Browser can't access Railway internal domains
     return config.public.apiUrl
   }
 }
@@ -44,10 +45,15 @@ export async function apiRequest<T>(
 
 export const api = {
   get: <T>(endpoint: string) => apiRequest<T>(endpoint, { method: 'GET' }),
-  post: <T>(endpoint: string, data?: any) => 
-    apiRequest<T>(endpoint, { 
-      method: 'POST', 
-      body: data ? JSON.stringify(data) : undefined 
+  post: <T>(endpoint: string, data?: any) =>
+    apiRequest<T>(endpoint, {
+      method: 'POST',
+      body: data ? JSON.stringify(data) : undefined
+    }),
+  patch: <T>(endpoint: string, data?: any) =>
+    apiRequest<T>(endpoint, {
+      method: 'PATCH',
+      body: data ? JSON.stringify(data) : undefined
     }),
   delete: <T>(endpoint: string) => apiRequest<T>(endpoint, { method: 'DELETE' }),
 }

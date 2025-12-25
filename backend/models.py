@@ -46,16 +46,17 @@ class UserEmail(Base):
 
 class FeedItem(Base):
     __tablename__ = "feed_items"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     sender_email = Column(String, nullable=False, index=True)
     core_link = Column(String, nullable=False)
     received_date = Column(DateTime, nullable=False)
     processed_date = Column(DateTime, nullable=False, default=datetime.utcnow)
-    
+    notes = Column(Text, nullable=True)
+
     # User association (nullable for backward compatibility)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
-    
+
     # Relationships
     user = relationship("User", back_populates="feed_items")
 

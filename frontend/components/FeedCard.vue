@@ -1,48 +1,135 @@
 <template>
-  <article class="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
+  <article class="feed-card bg-white border border-slate-200/60 overflow-hidden hover:shadow-xl hover:shadow-slate-200/50 hover:border-slate-300/60 transition-all duration-300 hover:-translate-y-0.5">
+    <!-- Card Header: Source/Author -->
+    <div class="card-header px-4 py-3 flex items-center justify-between border-b border-slate-100">
+      <div class="flex items-center gap-3">
+        <!-- Avatar -->
+        <div class="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-xs">
+          {{ getInitials(getPosterName()) }}
+        </div>
+
+        <!-- Source info -->
+        <div class="flex items-center gap-2 text-sm">
+          <span class="font-semibold text-slate-900">{{ getPosterName() }}</span>
+          <span
+            v-if="item.preview?.platform"
+            class="platform-badge-mini"
+            :class="platformBadgeClass"
+          >
+            {{ getPlatformLabel(item.preview.platform) }}
+          </span>
+          <span class="text-slate-400">·</span>
+          <span class="text-slate-500">{{ formatDate(item.received_date) }}</span>
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div class="flex items-center gap-2">
+        <!-- External link icon -->
+        <a
+          :href="item.core_link"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="text-slate-400 hover:text-slate-600 transition-colors"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+          </svg>
+        </a>
+
+        <!-- Delete button -->
+        <button
+          @click="handleDelete"
+          class="text-slate-400 hover:text-red-600 transition-colors"
+          title="Delete post"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Card Content -->
     <a
       :href="item.core_link"
       target="_blank"
       rel="noopener noreferrer"
-      class="block"
+      class="block group"
     >
-      <div v-if="item.preview?.image_url" class="w-full h-48 overflow-hidden bg-gray-200">
-        <img
-          :src="item.preview.image_url"
-          :alt="item.preview.title || 'Link preview'"
-          class="w-full h-full object-cover"
-          @error="imageError = true"
-        />
-      </div>
-      
-      <div class="p-6">
-        <div class="flex items-start justify-between mb-2">
-          <div class="flex-1">
-            <h3 class="text-xl font-semibold text-gray-900 mb-2 line-clamp-2">
-              {{ item.preview?.title || item.core_link }}
-            </h3>
-            <p v-if="item.preview?.description" class="text-gray-600 text-sm mb-3 line-clamp-2">
-              {{ item.preview.description }}
-            </p>
-          </div>
+      <!-- Twitter/Reddit: Text first, then image -->
+      <template v-if="item.preview?.platform === 'twitter' || item.preview?.platform === 'reddit'">
+        <div v-if="item.preview?.text_content || item.preview?.title" class="px-4 py-3">
+          <p class="text-[15px] text-slate-900 leading-relaxed">
+            {{ item.preview.text_content || item.preview.title }}
+          </p>
         </div>
-        
-        <div class="flex items-center justify-between text-sm text-gray-500">
-          <div class="flex items-center gap-2">
-            <span v-if="item.preview?.site_name" class="font-medium">
-              {{ item.preview.site_name }}
-            </span>
-            <span v-else class="truncate max-w-xs">
-              {{ getHostname(item.core_link) }}
-            </span>
-          </div>
-          <div class="flex items-center gap-3">
-            <span class="text-xs">{{ item.sender_email }}</span>
-            <span>{{ formatDate(item.received_date) }}</span>
-          </div>
+
+        <div v-if="displayImage" class="w-full overflow-hidden">
+          <img
+            :src="displayImage"
+            :alt="'Post image'"
+            class="w-full h-auto max-h-[500px] object-cover"
+            @error="handleImageError"
+          />
         </div>
-      </div>
+      </template>
+
+      <!-- YouTube/Vimeo: Video embed + title -->
+      <template v-else-if="(item.preview?.platform === 'youtube' || item.preview?.platform === 'vimeo') && item.preview?.embed_html">
+        <div class="aspect-video bg-black" v-html="item.preview.embed_html"></div>
+        <div v-if="item.preview?.title" class="px-4 py-3">
+          <h3 class="font-semibold text-slate-900">{{ item.preview.title }}</h3>
+          <p v-if="item.preview?.description" class="text-sm text-slate-600 mt-1 line-clamp-2">
+            {{ item.preview.description }}
+          </p>
+        </div>
+      </template>
+
+      <!-- Articles: Image + title/description -->
+      <template v-else-if="item.preview?.title || item.preview?.description || displayImage">
+        <div v-if="displayImage" class="w-full overflow-hidden">
+          <img
+            :src="displayImage"
+            :alt="item.preview?.title || 'Article image'"
+            class="w-full h-auto max-h-[400px] object-cover group-hover:scale-[1.02] transition-transform duration-500"
+            @error="handleImageError"
+          />
+        </div>
+
+        <div class="px-4 py-3">
+          <h3 v-if="item.preview?.title" class="text-lg font-bold text-slate-900 leading-snug line-clamp-3">
+            {{ item.preview.title }}
+          </h3>
+          <p v-if="item.preview?.description" class="text-sm text-slate-600 mt-2 line-clamp-2">
+            {{ item.preview.description }}
+          </p>
+        </div>
+      </template>
+
+      <!-- No preview: Show the full link -->
+      <template v-else>
+        <div class="px-4 py-3">
+          <p class="text-sm text-slate-600 break-all">
+            {{ item.core_link }}
+          </p>
+        </div>
+      </template>
     </a>
+
+    <!-- Notes section -->
+    <div class="px-4 py-3 border-t border-slate-100">
+      <textarea
+        v-model="localNotes"
+        @input="handleNotesChange"
+        placeholder="Add notes..."
+        class="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all resize-none bg-slate-50 focus:bg-white"
+        rows="2"
+      ></textarea>
+      <div v-if="saveStatus" class="text-xs text-slate-400 mt-1">
+        {{ saveStatus }}
+      </div>
+    </div>
   </article>
 </template>
 
@@ -54,7 +141,50 @@ interface Props {
 }
 
 const props = defineProps<Props>()
-const imageError = ref(false)
+const { deleteFeedItem, updateNotes } = useFeed()
+const imageErrors = ref<Set<string>>(new Set())
+const localNotes = ref(props.item.notes || '')
+const saveStatus = ref('')
+let saveTimeout: NodeJS.Timeout | null = null
+
+const hasPreviewData = computed(() => {
+  const preview = props.item.preview
+  if (!preview) return false
+  return !!(
+    preview.title ||
+    preview.description ||
+    preview.image_url ||
+    preview.images?.length ||
+    preview.text_content
+  )
+})
+
+const getPosterName = () => {
+  // Priority 1: Author (Twitter user, Reddit user, etc.)
+  if (props.item.preview?.author) {
+    return props.item.preview.author
+  }
+
+  // Priority 2: Site name (Washington Post, NYT, etc.)
+  if (props.item.preview?.site_name) {
+    return props.item.preview.site_name
+  }
+
+  // Priority 3: Hostname from URL
+  return getHostname(props.item.core_link)
+}
+
+const getInitials = (name: string) => {
+  if (name.includes('@')) {
+    return name.split('@')[0].slice(0, 2).toUpperCase()
+  }
+
+  const words = name.split(' ')
+  if (words.length >= 2) {
+    return (words[0][0] + words[1][0]).toUpperCase()
+  }
+  return name.slice(0, 2).toUpperCase()
+}
 
 const getHostname = (url: string) => {
   try {
@@ -72,18 +202,140 @@ const formatDate = (dateString: string) => {
   const minutes = Math.floor(seconds / 60)
   const hours = Math.floor(minutes / 60)
   const days = Math.floor(hours / 24)
-  
+
   if (days > 7) {
-    return date.toLocaleDateString()
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
   } else if (days > 0) {
-    return `${days}d ago`
+    return `${days}d`
   } else if (hours > 0) {
-    return `${hours}h ago`
+    return `${hours}h`
   } else if (minutes > 0) {
-    return `${minutes}m ago`
+    return `${minutes}m`
   } else {
-    return 'Just now'
+    return 'now'
   }
 }
+
+const handleImageError = (event: Event) => {
+  const img = event.target as HTMLImageElement
+  if (img.src) {
+    imageErrors.value.add(img.src)
+  }
+}
+
+const displayImage = computed(() => {
+  const preview = props.item.preview
+  if (!preview) return null
+
+  if (preview.images && preview.images.length > 0) {
+    return preview.images[0]
+  }
+
+  if (preview.image_url && !imageErrors.value.has(preview.image_url)) {
+    return preview.image_url
+  }
+
+  return null
+})
+
+const platformBadgeClass = computed(() => {
+  const platform = props.item.preview?.platform
+  switch (platform) {
+    case 'twitter':
+      return 'bg-sky-100 text-sky-700'
+    case 'youtube':
+      return 'bg-red-100 text-red-700'
+    case 'reddit':
+      return 'bg-orange-100 text-orange-700'
+    case 'instagram':
+      return 'bg-pink-100 text-pink-700'
+    case 'tiktok':
+      return 'bg-slate-900 text-white'
+    default:
+      return 'bg-slate-100 text-slate-600'
+  }
+})
+
+const getPlatformLabel = (platform: string | null | undefined) => {
+  if (!platform) return ''
+  const labels: Record<string, string> = {
+    twitter: '𝕏',
+    youtube: 'YT',
+    reddit: 'Reddit',
+    instagram: 'IG',
+    tiktok: 'TikTok',
+    article: 'Article'
+  }
+  return labels[platform] || ''
+}
+
+const handleDelete = async () => {
+  if (confirm('Are you sure you want to delete this post?')) {
+    try {
+      await deleteFeedItem(props.item.id)
+    } catch (error) {
+      console.error('Failed to delete post:', error)
+      alert('Failed to delete post. Please try again.')
+    }
+  }
+}
+
+const handleNotesChange = () => {
+  saveStatus.value = 'Saving...'
+
+  if (saveTimeout) {
+    clearTimeout(saveTimeout)
+  }
+
+  saveTimeout = setTimeout(async () => {
+    try {
+      await updateNotes(props.item.id, localNotes.value)
+      saveStatus.value = 'Saved'
+      setTimeout(() => {
+        saveStatus.value = ''
+      }, 2000)
+    } catch (error) {
+      console.error('Failed to save notes:', error)
+      saveStatus.value = 'Failed to save'
+    }
+  }, 1000) // Debounce for 1 second
+}
+
+// Watch for prop changes
+watch(() => props.item.notes, (newNotes) => {
+  if (newNotes !== localNotes.value) {
+    localNotes.value = newNotes || ''
+  }
+})
 </script>
 
+<style scoped>
+.feed-card {
+  @apply rounded-xl shadow-sm;
+  animation: fadeInUp 0.4s ease-out;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.platform-badge-mini {
+  @apply inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-bold tracking-wide;
+}
+
+:deep(iframe) {
+  @apply w-full rounded-lg;
+}
+
+/* Smooth image loading */
+.feed-card img {
+  @apply bg-slate-100;
+}
+</style>

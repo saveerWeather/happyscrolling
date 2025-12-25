@@ -33,6 +33,14 @@ class LinkPreview(BaseModel):
     description: Optional[str] = None
     image_url: Optional[str] = None
     site_name: Optional[str] = None
+    text_content: Optional[str] = None  # Full text content (e.g., tweet text)
+    images: Optional[List[str]] = None  # Multiple images
+    author: Optional[str] = None  # Author/username
+    platform: Optional[str] = None  # twitter, reddit, article, youtube, etc.
+    subreddit: Optional[str] = None  # For Reddit posts
+    published_time: Optional[str] = None  # For articles
+    embed_html: Optional[str] = None  # HTML for embeddable content (YouTube, Twitter, etc.)
+    embeddable: Optional[bool] = False  # Whether this content should be embedded
 
 class FeedItemResponse(BaseModel):
     id: int
@@ -40,9 +48,10 @@ class FeedItemResponse(BaseModel):
     core_link: str
     received_date: datetime
     processed_date: datetime
+    notes: Optional[str] = None
     # Preview data fetched on-demand
-    preview: Optional[Dict[str, Optional[str]]] = None
-    
+    preview: Optional[LinkPreview] = None
+
     class Config:
         from_attributes = True
 
@@ -65,4 +74,7 @@ class UserEmailResponse(BaseModel):
 
 class AddEmailRequest(BaseModel):
     email_address: EmailStr
+
+class UpdateNotesRequest(BaseModel):
+    notes: str
 
