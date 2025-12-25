@@ -14,12 +14,16 @@ if str(project_root) not in sys.path:
 
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
+from datetime import datetime, timedelta
+import secrets
+import os
 
 # Use direct imports (Railway runs from /backend directory)
 from utils.database import get_db
-from models import User
+from models import User, EmailVerificationToken
 from schemas import UserRegister, UserLogin, UserResponse
 from utils.auth import verify_password, get_password_hash
+from utils.email import email_service
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
@@ -52,21 +56,38 @@ def register(user_data: UserRegister, request: Request, db: Session = Depends(ge
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Email or username already registered"
             )
-        
+
         # Create new user
         hashed_password = get_password_hash(user_data.password)
         new_user = User(
             username=user_data.username,
             email=user_data.email,
-            password_hash=hashed_password
+            password_hash=hashed_password,
+            email_verified=False
         )
         db.add(new_user)
         db.commit()
         db.refresh(new_user)
-        
+
+        # Generate verification token
+        token = secrets.token_urlsafe(48)
+        expires = datetime.utcnow() + timedelta(hours=24)
+        verification = EmailVerificationToken(
+            user_id=new_user.id,
+            token=token,
+            email=new_user.email,
+            expires_at=expires
+        )
+        db.add(verification)
+        db.commit()
+
+        # Send verification email
+        base_url = os.getenv('FRONTEND_URL', 'http://localhost:3000')
+        email_service.send_verification_email(new_user.email, token, base_url)
+
         # Set user ID in session
         request.session["user_id"] = new_user.id
-        
+
         return new_user
     except HTTPException:
         raise

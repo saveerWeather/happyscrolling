@@ -56,7 +56,7 @@ except Exception as e:
     raise
 
 try:
-    from routes import auth, feed, settings as settings_routes
+    from routes import auth, feed, settings as settings_routes, account
 except Exception as e:
     logger.error(f"Failed to import routes: {e}")
     raise
@@ -70,9 +70,9 @@ except Exception as e:
     logger.error(f"Failed to create database tables: {e}")
 
 app = FastAPI(
-    title="Happy Scrolling API",
-    description="Email feed aggregator API",
-    version="1.0.0"
+    title="Busyplates API",
+    description="Save it for later - email feed aggregator API",
+    version="2.0.0"
 )
 
 # CORS middleware
@@ -133,11 +133,12 @@ async def log_requests(request: Request, call_next):
 app.include_router(auth.router)
 app.include_router(feed.router)
 app.include_router(settings_routes.router)
+app.include_router(account.router)
 
 @app.get("/")
 def root():
     try:
-        return {"message": "Happy Scrolling API", "status": "running"}
+        return {"message": "Busyplates API", "status": "running"}
     except Exception as e:
         logger.error(f"Root endpoint failed: {e}", exc_info=True)
         return {"status": "error", "error": str(e)}, 500

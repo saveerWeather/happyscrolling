@@ -21,9 +21,10 @@ class UserResponse(BaseModel):
     id: int
     username: str
     email: str
+    display_name: Optional[str] = None
     email_verified: bool
     created_at: datetime
-    
+
     class Config:
         from_attributes = True
 
@@ -77,4 +78,30 @@ class AddEmailRequest(BaseModel):
 
 class UpdateNotesRequest(BaseModel):
     notes: str
+
+# Account management schemas
+class UpdateProfileRequest(BaseModel):
+    username: Optional[str] = None
+    email: Optional[EmailStr] = None
+    display_name: Optional[str] = None
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str
+
+class RequestPasswordResetRequest(BaseModel):
+    email: EmailStr
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    new_password: str
+
+class VerifyEmailRequest(BaseModel):
+    token: str
+
+class ResendVerificationRequest(BaseModel):
+    email: EmailStr
+
+class DeleteAccountRequest(BaseModel):
+    password: str
 

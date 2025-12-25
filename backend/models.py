@@ -20,14 +20,15 @@ from utils.database import Base
 
 class User(Base):
     __tablename__ = "users"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     username = Column(String, unique=True, index=True, nullable=False)
     email = Column(String, unique=True, index=True, nullable=False)
     password_hash = Column(String, nullable=False)
+    display_name = Column(String, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     email_verified = Column(Boolean, default=False)
-    
+
     # Relationships
     linked_emails = relationship("UserEmail", back_populates="user", cascade="all, delete-orphan")
     feed_items = relationship("FeedItem", back_populates="user")
@@ -59,4 +60,31 @@ class FeedItem(Base):
 
     # Relationships
     user = relationship("User", back_populates="feed_items")
+
+class EmailVerificationToken(Base):
+    __tablename__ = "email_verification_tokens"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    token = Column(String(64), unique=True, index=True, nullable=False)
+    email = Column(String, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    expires_at = Column(DateTime, nullable=False)
+    used = Column(Boolean, default=False)
+
+    # Relationships
+    user = relationship("User")
+
+class PasswordResetToken(Base):
+    __tablename__ = "password_reset_tokens"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    token = Column(String(64), unique=True, index=True, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    expires_at = Column(DateTime, nullable=False)
+    used = Column(Boolean, default=False)
+
+    # Relationships
+    user = relationship("User")
 
