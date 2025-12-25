@@ -182,7 +182,7 @@ async def log_requests(request: Request, call_next):
         cors_credentials = response.headers.get("access-control-allow-credentials", "not set")
         
         # Log Set-Cookie headers in response
-        set_cookie_headers = [h for h in response.headers.get_list("set-cookie")]
+        set_cookie_headers = response.headers.getlist("set-cookie")
         logger.info(f"{request.method} {request.url.path} - {response.status_code} | CORS origin: {cors_origin}, credentials: {cors_credentials}, Set-Cookie headers: {len(set_cookie_headers)}")
         
         # For OPTIONS preflight, credentials header is critical
