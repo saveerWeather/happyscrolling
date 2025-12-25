@@ -25,9 +25,10 @@ try:
 except ImportError:
     pass  # python-dotenv not installed, that's okay
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.sessions import SessionMiddleware
+from starlette.responses import Response
 import logging
 
 # Configure logging
@@ -63,33 +64,61 @@ app = FastAPI(
 # CORS middleware (MUST be before Session middleware for preflight requests)
 # Log what we're actually using
 logger.info(f"Setting CORS with origins: {settings.cors_origins}")
+# CORS configuration - use explicit lists for compatibility
+# FastAPI's CORSMiddleware may not support ["*"] in all versions
+cors_methods = ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH", "HEAD"]
+cors_headers = [
+    "Content-Type",
+    "Authorization",
+    "Accept",
+    "Origin",
+    "X-Requested-With",
+    "Access-Control-Request-Method",
+    "Access-Control-Request-Headers",
+    "Cookie",
+    "Set-Cookie",
+    "X-CSRFToken",
+    "X-CSRF-Token",
+]
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,  # List of allowed origins
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
-    allow_headers=["Content-Type", "Authorization", "Accept", "Origin", "X-Requested-With"],
+    allow_methods=cors_methods,
+    allow_headers=cors_headers,
     expose_headers=["*"],
     max_age=3600,
 )
 
 # Session middleware (after CORS)
+# Use "none" for cross-origin support (required for Railway where frontend/backend are different domains)
+# This allows cookies to be sent cross-origin when using HTTPS
 app.add_middleware(
     SessionMiddleware,
     secret_key=settings.jwt_secret,  # Reuse JWT secret for session signing
     max_age=60 * 60 * 24 * 7,  # 7 days
-    same_site="lax"
+    same_site="none",
 )
 
 # Add request logging middleware (after CORS)
 @app.middleware("http")
-async def log_requests(request, call_next):
+async def log_requests(request: Request, call_next):
     origin = request.headers.get("origin", "no origin")
     logger.info(f"{request.method} {request.url.path} from origin: {origin}")
+    
+    # Log preflight request details
+    if request.method == "OPTIONS":
+        access_control_method = request.headers.get("access-control-request-method", "not set")
+        access_control_headers = request.headers.get("access-control-request-headers", "not set")
+        logger.info(f"OPTIONS preflight - method: {access_control_method}, headers: {access_control_headers}")
+    
     response = await call_next(request)
     # Log CORS headers in response
     cors_origin = response.headers.get("access-control-allow-origin", "not set")
-    logger.info(f"{request.method} {request.url.path} - {response.status_code} | CORS origin: {cors_origin}")
+    cors_methods = response.headers.get("access-control-allow-methods", "not set")
+    cors_headers = response.headers.get("access-control-allow-headers", "not set")
+    logger.info(f"{request.method} {request.url.path} - {response.status_code} | CORS origin: {cors_origin}, methods: {cors_methods}, headers: {cors_headers}")
     return response
 
 # Include routers
@@ -122,5 +151,17 @@ def debug_db():
         "database_type": db_type,
         "database_url": safe_url,
         "using_postgres": USE_POSTGRES and not DATABASE_URL.startswith('sqlite')
+    }
+
+@app.get("/debug/cors")
+def debug_cors(request: Request):
+    """Debug endpoint to check CORS configuration"""
+    origin = request.headers.get("origin", "no origin")
+    return {
+        "configured_origins": settings.cors_origins,
+        "request_origin": origin,
+        "origin_allowed": origin in settings.cors_origins if origin != "no origin" else False,
+        "cors_methods": cors_methods,
+        "cors_headers": cors_headers,
     }
 

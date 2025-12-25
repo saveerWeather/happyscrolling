@@ -22,9 +22,9 @@ except ImportError:
 # ==================== CONFIG ====================
 
 GMAIL_USER = os.getenv('GMAIL_USER', 'addtofeed2@gmail.com')
-GMAIL_PASSWORD = os.getenv('GMAIL_PASSWORD', 'yxnbxbocasotkfix')
+GMAIL_PASSWORD = os.getenv('GMAIL_PASSWORD')
 CHECK_INTERVAL = int(os.getenv('CHECK_INTERVAL', '30'))
-DATABASE_URL = os.getenv('DATABASE_URL','postgresql://postgres:KKhvvCphcBkLEhvFAyJRhFMHWJACnlTD@caboose.proxy.rlwy.net:29590/railway')  # Railway provides this
+DATABASE_URL = os.getenv('DATABASE_URL')  # Railway provides this
 
 # ==================== DATABASE ====================
 
