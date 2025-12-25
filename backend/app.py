@@ -25,10 +25,11 @@ try:
 except ImportError:
     pass  # python-dotenv not installed, that's okay
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 from starlette.responses import Response
+from sqlalchemy.orm import Session
 import logging
 
 # Configure logging
@@ -245,6 +246,7 @@ def debug_cors(request: Request):
 def debug_users(db: Session = Depends(get_db)):
     """Debug endpoint to list all users (email only for security)"""
     from models import User
+    from utils.database import get_db
     users = db.query(User).all()
     return {
         "total_users": len(users),
