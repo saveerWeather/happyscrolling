@@ -41,7 +41,9 @@ from utils.database import engine, Base
 from routes import auth, feed, settings as settings_routes
 
 # Log CORS origins for debugging
-logger.info(f"CORS origins: {settings.cors_origins}")
+logger.info(f"CORS origins configured: {settings.cors_origins}")
+logger.info(f"CORS origins type: {type(settings.cors_origins)}")
+logger.info(f"CORS origins length: {len(settings.cors_origins)}")
 
 # Create database tables
 Base.metadata.create_all(bind=engine)
@@ -52,21 +54,22 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# Session middleware (must be before CORS)
+# CORS middleware (MUST be before Session middleware for preflight requests)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.cors_origins,
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["*"],
+    expose_headers=["*"],
+)
+
+# Session middleware (after CORS)
 app.add_middleware(
     SessionMiddleware,
     secret_key=settings.jwt_secret,  # Reuse JWT secret for session signing
     max_age=60 * 60 * 24 * 7,  # 7 days
     same_site="lax"
-)
-
-# CORS middleware
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=settings.cors_origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
 )
 
 # Add request logging middleware
