@@ -159,6 +159,10 @@ async def log_requests(request: Request, call_next):
     origin = request.headers.get("origin", "no origin")
     logger.info(f"{request.method} {request.url.path} from origin: {origin}")
     
+    # Log cookies in request
+    cookies = list(request.cookies.keys())
+    logger.info(f"{request.method} {request.url.path} - Request cookies: {cookies}")
+    
     # Log preflight request details
     if request.method == "OPTIONS":
         access_control_method = request.headers.get("access-control-request-method", "not set")
@@ -171,7 +175,15 @@ async def log_requests(request: Request, call_next):
         cors_origin = response.headers.get("access-control-allow-origin", "not set")
         cors_methods = response.headers.get("access-control-allow-methods", "not set")
         cors_headers = response.headers.get("access-control-allow-headers", "not set")
-        logger.info(f"{request.method} {request.url.path} - {response.status_code} | CORS origin: {cors_origin}, methods: {cors_methods}, headers: {cors_headers}")
+        
+        # Log Set-Cookie headers in response
+        set_cookie_headers = [h for h in response.headers.get_list("set-cookie")]
+        logger.info(f"{request.method} {request.url.path} - {response.status_code} | CORS origin: {cors_origin}, Set-Cookie headers: {len(set_cookie_headers)}")
+        if set_cookie_headers:
+            for cookie in set_cookie_headers:
+                # Log first 100 chars of cookie (to see Secure, SameSite, etc)
+                logger.info(f"  Cookie: {cookie[:100]}...")
+        
         return response
     except Exception as e:
         logger.error(f"Error processing {request.method} {request.url.path}: {e}", exc_info=True)

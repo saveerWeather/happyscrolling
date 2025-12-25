@@ -25,8 +25,17 @@ router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 def get_current_user(request: Request, db: Session = Depends(get_db)) -> User:
     """Get current authenticated user from session"""
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    # Log session debugging info
+    logger.info(f"get_current_user: Session keys: {list(request.session.keys())}")
+    logger.info(f"get_current_user: Session data: {dict(request.session)}")
+    logger.info(f"get_current_user: Cookies in request: {list(request.cookies.keys())}")
+    
     user_id = request.session.get("user_id")
     if not user_id:
+        logger.warning("get_current_user: No user_id in session")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Not authenticated"
@@ -114,7 +123,12 @@ def login(credentials: UserLogin, request: Request, db: Session = Depends(get_db
         
         # Set user ID in session
         request.session["user_id"] = user.id
-        logger.info(f"User {user.id} logged in successfully")
+        logger.info(f"User {user.id} logged in successfully, session set: {request.session.get('user_id')}")
+        
+        # Log session details for debugging
+        logger.info(f"Session keys: {list(request.session.keys())}")
+        logger.info(f"Session data: {dict(request.session)}")
+        
         return user
     except HTTPException:
         raise
