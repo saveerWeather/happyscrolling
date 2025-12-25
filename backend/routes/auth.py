@@ -89,6 +89,7 @@ def login(credentials: UserLogin, request: Request, db: Session = Depends(get_db
     logger = logging.getLogger(__name__)
     
     try:
+        logger.info(f"Login attempt for email: {credentials.email}")
         user = db.query(User).filter(User.email == credentials.email).first()
         if not user:
             logger.warning(f"Login attempt with non-existent email: {credentials.email}")
@@ -97,7 +98,11 @@ def login(credentials: UserLogin, request: Request, db: Session = Depends(get_db
                 detail="Incorrect email or password"
             )
         
-        if not verify_password(credentials.password, user.password_hash):
+        logger.info(f"User found: {user.id}, verifying password...")
+        password_valid = verify_password(credentials.password, user.password_hash)
+        logger.info(f"Password verification result: {password_valid}")
+        
+        if not password_valid:
             logger.warning(f"Login attempt with incorrect password for: {credentials.email}")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
