@@ -45,8 +45,14 @@ logger.info(f"CORS origins configured: {settings.cors_origins}")
 logger.info(f"CORS origins type: {type(settings.cors_origins)}")
 logger.info(f"CORS origins length: {len(settings.cors_origins)}")
 
-# Create database tables
-Base.metadata.create_all(bind=engine)
+# Create database tables (with error handling)
+try:
+    logger.info("Creating database tables...")
+    Base.metadata.create_all(bind=engine)
+    logger.info("Database tables created successfully")
+except Exception as e:
+    logger.error(f"Failed to create database tables: {e}", exc_info=True)
+    # Don't crash - tables might already exist
 
 app = FastAPI(
     title="Happy Scrolling API",
@@ -61,9 +67,10 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,  # List of allowed origins
     allow_credentials=True,
-    allow_methods=["*"],  # Allow all methods
-    allow_headers=["*"],  # Allow all headers
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+    allow_headers=["Content-Type", "Authorization", "Accept", "Origin", "X-Requested-With"],
     expose_headers=["*"],
+    max_age=3600,
 )
 
 # Session middleware (after CORS)
@@ -74,28 +81,15 @@ app.add_middleware(
     same_site="lax"
 )
 
-# Add request logging middleware
+# Add request logging middleware (after CORS)
 @app.middleware("http")
 async def log_requests(request, call_next):
     origin = request.headers.get("origin", "no origin")
     logger.info(f"{request.method} {request.url.path} from origin: {origin}")
     response = await call_next(request)
-    logger.info(f"{request.method} {request.url.path} - {response.status_code}")
-    return response
-
-# Explicit OPTIONS handler as fallback
-@app.options("/{full_path:path}")
-async def options_handler(request):
-    """Handle OPTIONS preflight requests"""
-    origin = request.headers.get("origin")
-    logger.info(f"OPTIONS request from origin: {origin}")
-    from fastapi.responses import Response
-    response = Response()
-    if origin in settings.cors_origins:
-        response.headers["Access-Control-Allow-Origin"] = origin
-        response.headers["Access-Control-Allow-Credentials"] = "true"
-        response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
-        response.headers["Access-Control-Allow-Headers"] = "*"
+    # Log CORS headers in response
+    cors_origin = response.headers.get("access-control-allow-origin", "not set")
+    logger.info(f"{request.method} {request.url.path} - {response.status_code} | CORS origin: {cors_origin}")
     return response
 
 # Include routers

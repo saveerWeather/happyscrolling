@@ -16,17 +16,29 @@ if str(project_root) not in sys.path:
 
 if __name__ == "__main__":
     import uvicorn
-    # Import app directly instead of using string import
-    # This ensures all path setup happens before uvicorn tries to load it
-    from app import app
+    import logging
     
-    # Use PORT from environment (Railway provides this) or default to 8000
-    port = int(os.getenv("PORT", 8000))
+    logging.basicConfig(level=logging.INFO)
+    logger = logging.getLogger(__name__)
     
-    uvicorn.run(
-        app,
-        host="0.0.0.0",
-        port=port,
-        reload=False,  # Disable reload in production
-    )
+    try:
+        logger.info("Starting FastAPI application...")
+        # Import app directly instead of using string import
+        # This ensures all path setup happens before uvicorn tries to load it
+        from app import app
+        logger.info("App imported successfully")
+        
+        # Use PORT from environment (Railway provides this) or default to 8000
+        port = int(os.getenv("PORT", 8000))
+        logger.info(f"Starting server on port {port}")
+        
+        uvicorn.run(
+            app,
+            host="0.0.0.0",
+            port=port,
+            reload=False,  # Disable reload in production
+        )
+    except Exception as e:
+        logger.error(f"Failed to start application: {e}", exc_info=True)
+        raise
 
