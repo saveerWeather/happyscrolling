@@ -34,17 +34,22 @@ if __name__ == "__main__":
         logger.info(f"PORT environment variable: {os.getenv('PORT', 'NOT SET')}")
         logger.info("=" * 50)
         
-        # Import app to verify it works, but use string import for uvicorn
+        # Import the app module and access the app instance
         # This ensures all path setup happens before uvicorn tries to load it
-        logger.info("Importing app...")
-        from app import app as fastapi_app
-        logger.info("✓ App imported successfully")
+        logger.info("Importing app module...")
+        import app as app_module
+        logger.info("✓ App module imported successfully")
+        
+        # Access the FastAPI instance from the module
+        fastapi_app = app_module.app
         logger.info(f"App type: {type(fastapi_app)}")
         
         # Verify it's a FastAPI instance, not a module
         from fastapi import FastAPI
         if not isinstance(fastapi_app, FastAPI):
             raise TypeError(f"Expected FastAPI instance, got {type(fastapi_app)}")
+        
+        logger.info("✓ FastAPI instance verified")
         
         # Use PORT from environment (Railway provides this) or default to 8000
         port = int(os.getenv("PORT", 8000))
