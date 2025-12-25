@@ -243,3 +243,20 @@ def debug_users(db: Session = Depends(get_db)):
         ]
     }
 
+@app.delete("/debug/users/{email}")
+def delete_user_by_email(email: str, db: Session = Depends(get_db)):
+    """Debug endpoint to delete a user by email (for testing only)"""
+    from models import User
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    user = db.query(User).filter(User.email == email).first()
+    if not user:
+        return {"message": f"User with email {email} not found"}
+    
+    user_id = user.id
+    db.delete(user)
+    db.commit()
+    logger.info(f"Deleted user {user_id} with email {email}")
+    return {"message": f"User {user_id} with email {email} deleted successfully"}
+
